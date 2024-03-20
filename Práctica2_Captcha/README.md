@@ -1,3 +1,5 @@
-En la carpeta 'modelo' se encuentra el último modelo creado.
+En la carpeta 'modelos' se encuentra el último modelo creado y el utilizado en la competición.
 
-El dataset utilizado no se ha subido por su tamaño (280MB). Debe estar en el mismo directorio que los notebooks '1.' y '2.'
+---
+
+**NOTA:** Modificar los path en la creación del dataset y en el notebook del modelo. 
