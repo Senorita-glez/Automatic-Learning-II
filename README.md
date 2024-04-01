@@ -14,6 +14,6 @@ Tranquilo, no te vamos a hacer pagar por visitar ni descargar este repositorio. 
 
 # 👥 Integrantes
 
-* Alejandro Mendoza @pintamonas4575
-* Luis Ascencio     @Luroi24
-* Daphne González   @Senorita-glez
+* Alejandro Mendoza [@pintamonas4575](https://github.com/pintamonas4575)
+* Luis Ascencio     [@Luroi24](https://github.com/Luroi24)
+* Daphne González   [@Senorita-glez](https://github.com/Senorita-glez)
