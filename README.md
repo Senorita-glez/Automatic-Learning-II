@@ -12,6 +12,8 @@ En esta práctica se crea un modelo en Tensorflow al que se le ha hecho *fine-tu
 
 Tranquilo, no te vamos a hacer pagar por visitar ni descargar este repositorio. 😌
 
-# Integrantes
+# 👥 Integrantes
 
-    * ddddddd
+* Alejandro Mendoza @pintamonas4575
+* Luis Ascencio     @Luroi24
+* Daphne González   @Senorita-glez
