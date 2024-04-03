@@ -10,9 +10,11 @@ En esta práctica se crea un modelo en Tensorflow al que se le ha hecho *fine-tu
 
 # 🛠️ Próximamente en cines...
 
-Práctica 3 - SOM (_**S**elf-**O**rganizing **M**aps_)
-Práctica 4 - NLP (_**N**atural **L**anguage **P**rocessing_)
-Práctica opcional - Regresión con ángulo de flechas (¿lo acabaremos haciendo?)
+* Práctica 3 - SOM (_**S**elf-**O**rganizing **M**aps_)
+
+* Práctica 4 - NLP (_**N**atural **L**anguage **P**rocessing_)
+
+* Práctica opcional - Regresión con ángulo de flechas (¿lo acabaremos haciendo?)
 
 # ⚖️ Licencia
 
