@@ -6,7 +6,7 @@ Práctica en la que se implementan en Tensorflow el perceptrón normal, el perce
 
 # 📂 Práctica 2
 
-En esta práctica se crea un modelo en Tensorflow al que se le ha hecho *fine-tuning* al modelo EfficientNetB2 para una competición de captchas.
+En esta práctica se crea un modelo en Tensorflow al que se le ha hecho *transfer learning* al modelo EfficientNetB2 para una competición de captchas.
 
 # 🛠️ Próximamente en cines...
 
