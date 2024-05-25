@@ -101,7 +101,7 @@ class TronGoshi(Goshi):
             action = self.policy_dqn(state).argmax().item()
         
         new_state = self.get_new_state(goban, action)
-        reward = self.reward_function(goban, ten)
+        reward = self.reward_function(goban, action)
         terminated = goban.seichō(action, self) or goban.jishi(action, self) # Añadir la condición si es el único jugador, se terminó
         self.memory.append((state, action, new_state, reward, terminated))
 
@@ -160,13 +160,13 @@ class TronGoshi(Goshi):
         torch.save(self.policy_dqn.state_dict(), "../tron_dql.pt")
 
     # Función de recompensa
-    def reward_function(self, goban: 'Goban', ten: 'Ten'):
+    def reward_function(self, goban: 'Goban', action):
         reward = 0.0
         return 1
     
-    def get_new_state(self, goban: 'Goban', ten: 'Ten'):
+    def get_new_state(self, goban: 'Goban', action):
         board = self.goban_to_state(goban)
-        board[ten.row*self.goban_size + ten.col]
+        board[action]
         return board
 
     # Pasamos del formato de ban de goban a uno donde sólo haya números
