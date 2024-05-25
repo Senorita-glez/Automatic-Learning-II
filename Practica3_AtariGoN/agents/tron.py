@@ -34,9 +34,10 @@ class ReplayMemory():
         return len(self.memory)
 
 class TronGoshi(Goshi):
-    """Player that makes random moves.
+    """
+    A player that hopes for the best.
 
-    You'll never know what it's going to do next!
+    On the other side of the screen, it looks so easy.
     """
 
     # Hiperparámetros
@@ -162,6 +163,14 @@ class TronGoshi(Goshi):
     # Función de recompensa
     def reward_function(self, goban: 'Goban', action):
         reward = 0.0
+        # Si se terminó el juego
+        # Si no
+            # Si comimos alguna piedra(s)
+            # Si defendimos alguna de nuestras fichas
+            # Si se fortaleció alguna estructura
+            # Si se colocó una pieza donde no
+            # Si hubo suicidio
+
         return 1
     
     def get_new_state(self, goban: 'Goban', action):
