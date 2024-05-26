@@ -6,17 +6,26 @@ from typing import Optional
 from collections import deque
 import numpy as np
 
+from typing import List, Optional, Set, NamedTuple
 from atarigon.api import Goshi, Goban, Ten
+from atarigon.exceptions import (
+    NotEnoughPlayersError,
+    SmallBoardError,
+    InvalidMoveError,
+    HikūtenError, KūtenError,
+)
 
-class DQN(nn.module):
-    def _init__(self, in_states, h1_nodes, out_actions):
+class DQN(nn.Module):
+    def __init__(self, in_states, h1_nodes, out_actions):
         super().__init__()
 
         self.fc1 = nn.Linear(in_states, h1_nodes)
+        self.fc2 = nn.Linear(h1_nodes, h1_nodes)
         self.out = nn.Linear(h1_nodes, out_actions)
 
     def forward(self, x):
         x = F.relu(self.fc1(x))
+        x = F.relu(self.fc2(x))
         x = self.out(x)
         return x
     
@@ -40,10 +49,14 @@ class TronGoshi(Goshi):
     On the other side of the screen, it looks so easy.
     """
 
+    around_points = [Ten(0, 1), Ten(1, 0), Ten(0, -1), Ten(-1, 0)]
+
+
     # Hiperparámetros
     learning_rate_a = 0.001
     discount_factor_g = 0.9
-    network_sync_rate = 10
+    min_epsilon_value = 0.3
+    network_sync_rate = 100
     replay_memory_size = 10000
     mini_batch_size = 64
 
@@ -57,15 +70,19 @@ class TronGoshi(Goshi):
     memory = ReplayMemory(replay_memory_size)
 
     # Creamos las redes de política y objetivo
-    policy_dqn = DQN(in_states=num_states, h1_nodes= num_states, out_actions = num_actions)
-    target_dqn = DQN(in_states=num_states, h1_nodes= num_states, out_actions = num_actions)
+    policy_dqn = DQN(in_states=num_states, h1_nodes= num_states*2, out_actions = num_actions)
+    target_dqn = DQN(in_states=num_states, h1_nodes= num_states*2, out_actions = num_actions)
 
+    policy_dqn.load_state_dict(torch.load('tron_dql.pt', map_location=torch.device('cpu'), weights_only=True))
     target_dqn.load_state_dict(policy_dqn.state_dict())
 
     optimizer = torch.optim.Adam(policy_dqn.parameters())
 
     # Para actualizar la red objetivo
     step_count = 0
+    illegal_moves = 0
+    historical_reward = []
+    total_reward = 0
 
     def __init__(self):
         """Initializes the player with the given name."""
@@ -93,37 +110,50 @@ class TronGoshi(Goshi):
         for ten in empty_positions:
             if goban.ban[ten.row][ten.col] is None:
                 random_position = ten.row*self.goban_size + ten.col
+                break
 
         # Action es un valor de 0 a n, con n el total de casillas en el tablero
         # Al final se convierte a una coordenada del tablero con la clase Ten.
         if random.random() < self.epsilon:
             action = random_position
         else:
-            action = self.policy_dqn(state).argmax().item()
-        
+            action = self.policy_dqn(torch.from_numpy(state).float()).argmax().item()
+
+        ten_action = self.output_to_ten(action)
         new_state = self.get_new_state(goban, action)
-        reward = self.reward_function(goban, action)
-        terminated = goban.seichō(action, self) or goban.jishi(action, self) # Añadir la condición si es el único jugador, se terminó
+
+        # Añadir la condición si es el único jugador, se terminó
+        try:
+            terminated = not goban.seichō(ten_action, self) 
+        except:
+            #self.illegal_moves += 1
+            #print(f"Movimiento ilegal: {self.output_to_ten(action)} | Illegal moves: {self.illegal_moves}")
+            #goban.print_board()
+            terminated = True
+        
+        reward = self.reward_function(goban, action) if not terminated else -1000 # Penalización por haberse suicidado/colocar mal una pieza
         self.memory.append((state, action, new_state, reward, terminated))
-
-        step_count+=1
-
+        self.step_count+=1
+        print(f'Reward: {reward}')
+        
         if len(self.memory) > self.mini_batch_size: # Revisar si también debería de ponerse la condicional de haber obtenido al menos alguna recompensa
             mini_batch = self.memory.sample(self.mini_batch_size)
             self.optimize(mini_batch)
 
             # Decaemiento de épsilon
-            self.epsilon = self.epsilon*0.995
+            if self.epsilon > self.min_epsilon_value:
+                self.epsilon = self.epsilon*0.9995
 
             # Copia de la red de política después de tantos pasos
-            if step_count > self.network_sync_rate:
+            if self.step_count > self.network_sync_rate:
                 self.target_dqn.load_state_dict(self.policy_dqn.state_dict())
-                step_count = 0
+                self.step_count = 0
 
         action = self.output_to_ten(action)
-
-        if goban.seichō(action, self):
-            action = self.output_to_ten(random_position)
+        #try:
+        #    goban.seichō(action, self)
+        #except:
+        #    action = None
         return action # Tiene que regresar un Ten, pero revisar para las otras funciones
 
     # Actualización de q values
@@ -132,6 +162,9 @@ class TronGoshi(Goshi):
         target_q_list = []
 
         for state, action, new_state, reward, terminated in mini_batch:
+            state = torch.from_numpy(state).float()  # Convert state to float tensor
+            new_state = torch.from_numpy(new_state).float()  # Convert new_state to float tensor
+            
             if terminated:
                 # El jugador terminó el juego, ya sea por suicidio, colocar mal una pieza o ser el último
                 # Si terminó, el q value objetivo debe ser igual a la recompensa
@@ -158,24 +191,145 @@ class TronGoshi(Goshi):
         loss.backward()
         self.optimizer.step()
 
-        torch.save(self.policy_dqn.state_dict(), "../tron_dql.pt")
+        torch.save(self.policy_dqn.state_dict(), "tron_dql.pt")
 
     # Función de recompensa
     def reward_function(self, goban: 'Goban', action):
-        reward = 0.0
+        reward = -5.0
+        if False: #self.did_we_win(goban):
+            reward += 100
         # Si se terminó el juego
         # Si no
+        else:
             # Si comimos alguna piedra(s)
+            captured_stones = self.captured_stones(goban, action) 
+            #print(f'Stones:{captured_stones}')
+            if captured_stones:
+                reward += 100*len(captured_stones)
             # Si defendimos alguna de nuestras fichas
             # Si se fortaleció alguna estructura
             # Si se colocó una pieza donde no
             # Si hubo suicidio
 
-        return 1
+        return reward
+    
+    def captured_stones(self, goban: 'Goban', action):
+        player = goban.stone_colors[self]
+        action = self.output_to_ten(action)
+        board = self.goban_to_numpy(goban)
+        row, col = action
+
+        board[row][col] = player
+        captured = self.check_captures(board, action, player)
+
+        return captured
+    
+    def check_captures(self,board, ten: Ten, player) -> Set[Goshi]:
+        """Checks whether the group at the given position has liberties.
+
+        :param ten: The position to check.
+        :param goshi: The player making the move.
+        :return: A set with the players that were captured. If no players
+            were captured, the set is empty.
+        """
+        captured = set()
+        for neighbor_coords in self.neighbourhood(ten):
+            neighbor_player = board[neighbor_coords.row][neighbor_coords.col]
+            if neighbor_player is None:
+                # If the neighbor is empty, we don't capture anything
+                continue
+            if neighbor_player == player:
+                # If the neighbor is us, we don't capture anything
+                continue
+            if self.player_liberties(board, neighbor_coords):
+                # The neighbor has liberties, we don't capture it
+                continue
+
+            # The neighbour has no liberties, so we capture it
+            captured.add(neighbor_player)
+        return captured
+    
+    def stones_captured(self, board, ten: Ten):
+        """Captures the group at the given position.
+
+        Inthe end, that means removing all the stones of the group from
+        the board, so we simply set all the intersections of the player
+        to None.
+
+        :param ten: The position to check.
+        :raises HikūtenError: If the intersection is empty.
+        """
+        enemy = board[ten.row][ten.col]
+        if enemy == 0:
+            raise HikūtenError(ten)
+
+        for r, row in enumerate(board):
+            for c, player_in_coords in enumerate(row):
+                if player_in_coords == enemy:
+                    board[r][c] = 0
+    
+    def player_liberties(self, board, ten: Ten) -> Set[Ten]:
+        """Liberties of the group for the player at the given position.
+
+        :param ten: The position to check.
+        :return: A list with the liberties of the group.
+        """
+        player = board[ten.row][ten.col]
+        if player == 0:
+            return True
+
+        stack = [ten]
+        visited = set()
+        liberties = set()
+        while stack:
+            ten = stack.pop()
+            if ten in visited:
+                # Intersection already visited, so we skip it
+                continue
+            else:
+                visited.add(ten)
+
+            for neighbor_coords in self.neighbourhood(ten):
+                neighbor_player = board[neighbor_coords.row][neighbor_coords.col]
+                if neighbor_player == 0:
+                    # Empty intersection in the neighbourhood, so we add it
+                    liberties.add(neighbor_coords)
+                elif neighbor_player == player:
+                    # Our stone in the neighbourhood; we add it to the stack
+                    stack.append(neighbor_coords)
+
+        return liberties
+    
+    def neighbourhood(self, ten: Ten) -> List[Ten]:
+        """The neighbourhood of a given intersecion.
+
+        :param ten: The intersecion to check.
+        :return: All the intersections belonging to the neighbourhood.
+        """
+        return [
+            ten
+            for ten in (ten + around for around in self.around_points)
+            if self.is_inside_board(ten)
+        ]
+    
+    def is_inside_board(self, ten: Ten) -> bool:
+        """If the position is inside the board
+
+        :param ten: The position to check.
+        :return: True if the position is valid, False otherwise.
+        """
+        return 0 <= ten.row < self.goban_size and 0 <= ten.col < self.goban_size
+
+    def did_we_win(self, goban: 'Goban'):
+        for row in goban.ban:
+            for player in row:
+                if player!= self: 
+                    return False
+        return True
     
     def get_new_state(self, goban: 'Goban', action):
         board = self.goban_to_state(goban)
-        board[action]
+        board[action] = 1
         return board
 
     # Pasamos del formato de ban de goban a uno donde sólo haya números
@@ -184,9 +338,17 @@ class TronGoshi(Goshi):
         for i, row in enumerate(goban.ban):
             for j, p in enumerate(row):
                 if p is not None:
-                    board[i*goban.size + j] = goban.stone_colors[p]
+                    board[i*goban.size + j] = 1 if p == self else -1 # TODO: Revisar aquí para cuando haya más jugadores
         return board
     
+    def goban_to_numpy(self, goban: 'Goban'):
+        board = np.zeros_like(goban.ban)
+        for i, row in enumerate(goban.ban):
+            for j, p in enumerate(row):
+                if p is not None:
+                    board[i,j] = goban.stone_colors[p]
+        return board
+
     # Salida a coordenadas del tablero
     def output_to_ten(self, output):
         row, column = divmod(output, self.goban_size) 

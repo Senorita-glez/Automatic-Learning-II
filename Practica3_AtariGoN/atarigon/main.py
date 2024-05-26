@@ -42,13 +42,15 @@ def run_game(
             # and the next player is called
             goshi.append(player)
             continue
-
         # Ok, is a movement. If it is invalid, the player is
         # disqualified and the next player is called
-        if not goban.seichō(ten, player):
+        try:
+            if not goban.seichō(ten, player):
+                shoshinsha.append(player)
+                continue
+        except:
             shoshinsha.append(player)
             continue
-
         # Stone is placed and captured players are removed from the game
         captured = goban.place_stone(ten, player)
         for captured_player in captured:
@@ -62,6 +64,8 @@ def run_game(
 
         # The player is added to the end of the list, waiting for its
         # next turn
+        #print(f'Player: {player.name}, Move: {ten}')
+        #goban.print_board()
         goshi.append(player)
 
     # Now we compute the scores based on the captured players and on
