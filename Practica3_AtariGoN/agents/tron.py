@@ -45,12 +45,12 @@ class ReplayMemory():
 
 class TronGoshi(Goshi):
     """
+    "I fight for the users!"
+                    -Tron
+                    
     A player that hopes for the best.
     Has the potential to be tuned to be more offensive, defensive or find the balance.
     Sometimes find itself humilliated by way dumber players.
-
-    "I fight for the users!"
-                    -Tron
     """
 
     around_points = [Ten(0, 1), Ten(1, 0), Ten(0, -1), Ten(-1, 0)]
@@ -81,7 +81,7 @@ class TronGoshi(Goshi):
     policy_dqn = DQN(in_states=num_states, h1_nodes= num_states*2, out_actions = num_actions)
     target_dqn = DQN(in_states=num_states, h1_nodes= num_states*2, out_actions = num_actions)
 
-    #policy_dqn.load_state_dict(torch.load('tron_dql.pt', map_location=torch.device('cpu'), weights_only=True))
+    policy_dqn.load_state_dict(torch.load('tron_dql.pt', map_location=torch.device('cpu'), weights_only=True))
     target_dqn.load_state_dict(policy_dqn.state_dict())
 
     optimizer = torch.optim.Adam(policy_dqn.parameters())
