@@ -54,7 +54,8 @@ class TronGoshi(Goshi):
                     
     A player that hopes for the best.
     Has the potential to be tuned to be more offensive, defensive or find the balance.
-    Sometimes find itself humilliated by way dumber players.
+
+    On the other side of the screen, it all looks so easy.
     """
 
     around_points = [Ten(0, 1), Ten(1, 0), Ten(0, -1), Ten(-1, 0)]
