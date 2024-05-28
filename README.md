@@ -16,8 +16,6 @@ Estamos a punto de vengar la muerte de Tron, **A TOPE JEFE DE EQUIPO!!!**
 
 Esta práctica pone a prueba una CNN para un problema de regresión. En este caso, intentar predecir el ángulo que forman las flechas de la carretera.
 
-**WARNING:** Hay menos filas en el CSV que en el dataset de imágenes. Por lo tanto, tener más en cuenta el CSV. 
-
 # 🛠️ Próximamente en cines...
 
 * Práctica 3 - AtariGoN (modificación del AtariGo para _n_ jugadores)
