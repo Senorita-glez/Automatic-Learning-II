@@ -20,13 +20,17 @@ class DQN(nn.Module):
     def __init__(self, in_states, h1_nodes, out_actions):
         super().__init__()
 
-        self.fc1 = nn.Linear(in_states, h1_nodes)
-        self.fc2 = nn.Linear(h1_nodes, h1_nodes)
-        self.out = nn.Linear(h1_nodes, out_actions)
+        self.fc1 = nn.Linear(in_states, 1024)
+        self.fc2 = nn.Linear(1024, h1_nodes)
+        self.fc3 = nn.Linear(h1_nodes, 512)
+        self.fc4 = nn.Linear(512, 512)
+        self.out = nn.Linear(512, out_actions)
 
     def forward(self, x):
         x = F.relu(self.fc1(x))
         x = F.relu(self.fc2(x))
+        x = F.relu(self.fc3(x))
+        x = F.relu(self.fc4(x))
         x = self.out(x)
         return x
     
@@ -81,8 +85,17 @@ class TronGoshi(Goshi):
     policy_dqn = DQN(in_states=num_states, h1_nodes= num_states*2, out_actions = num_actions)
     target_dqn = DQN(in_states=num_states, h1_nodes= num_states*2, out_actions = num_actions)
 
-    policy_dqn.load_state_dict(torch.load('tron_dql.pt', map_location=torch.device('cpu'), weights_only=True))
+    model_device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
+    try:
+        policy_dqn.load_state_dict(torch.load('tron.pt', map_location=model_device))
+    except:
+        pass
+    
+    policy_dqn.to(model_device)
+
     target_dqn.load_state_dict(policy_dqn.state_dict())
+    target_dqn.to(model_device)
 
     optimizer = torch.optim.Adam(policy_dqn.parameters())
 
@@ -138,20 +151,21 @@ class TronGoshi(Goshi):
 
         # Action es un valor de 0 a n, con n el total de casillas en el tablero
         # Al final se convierte a una coordenada del tablero con la clase Ten.
+        state_tensor = torch.from_numpy(state).float().to(self.model_device)
         if random.random() < self.epsilon:
             # Si hay algún movimiento heurístico, 50% de que se haga
             # TODO: En el juego cambiarlo al 100%
             if (heuristic or heuristic_defensive) and (random.random() < 0.5):
                 if random.random() < 0.5:
-                    action = heuristic if heuristic else self.policy_dqn(torch.from_numpy(state).float()).argmax().item()
+                    action = heuristic if heuristic else self.policy_dqn(state_tensor).argmax().item()
                 elif heuristic_defensive:
                     action = heuristic_defensive
                 else: 
-                    action = self.policy_dqn(torch.from_numpy(state).float()).argmax().item()
+                    action = self.policy_dqn(state_tensor).argmax().item()
             else:
                 action = random_position
         else:
-            action = self.policy_dqn(torch.from_numpy(state).float()).argmax().item()
+            action = self.policy_dqn(state_tensor).argmax().item()
 
         ten_action = self.output_to_ten(action)
         new_state = self.get_new_state(goban, action)
@@ -198,19 +212,18 @@ class TronGoshi(Goshi):
         target_q_list = []
 
         for state, action, new_state, reward, terminated in mini_batch:
-            state = torch.from_numpy(state).float()  # Convert state to float tensor
-            new_state = torch.from_numpy(new_state).float()  # Convert new_state to float tensor
+            state = torch.from_numpy(state).float().to(self.model_device)  # Convert state to float tensor
+            new_state = torch.from_numpy(new_state).float().to(self.model_device)  # Convert new_state to float tensor
             
             if terminated:
                 # El jugador terminó el juego, ya sea por suicidio, colocar mal una pieza o ser el último
                 # Si terminó, el q value objetivo debe ser igual a la recompensa
-                target = torch.FloatTensor([reward])
+                target = torch.tensor([reward], dtype=torch.float32, device=self.model_device)
             else:
                 # Calculamos el valor q
                 with torch.no_grad():
-                    target = torch.FloatTensor(
-                        reward + self.discount_factor_g * self.target_dqn(new_state).max()
-                    )
+                    target = (reward + self.discount_factor_g * self.target_dqn(new_state).max()).clone().detach().to(self.model_device)
+
 
             # Obtenemos los valores q de la política
             current_q = self.policy_dqn(state)
@@ -227,7 +240,7 @@ class TronGoshi(Goshi):
         loss.backward()
         self.optimizer.step()
 
-        torch.save(self.policy_dqn.state_dict(), "tron_dql.pt")
+        torch.save(self.policy_dqn.state_dict(), "tron.pt")
 
     # Función de recompensa
     def reward_function(self, goban: 'Goban', action):
