@@ -66,6 +66,7 @@ def run_game(
         # next turn
         #print(f'Player: {player.name}, Move: {ten}')
         #goban.print_board()
+        goban.print_board()
         goshi.append(player)
 
     # Now we compute the scores based on the captured players and on
