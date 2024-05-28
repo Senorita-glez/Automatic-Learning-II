@@ -124,7 +124,7 @@ def main():
     players = [clazz() for clazz in goshi_classes]
 
     # The player's scores (確認)
-    kakunin: Type[Goshi, List[int]] = {player: [] for player in players}
+    kakunin: Type[Goshi] = {player: [] for player in players}
     for game in range(args.games):
         results = run_game(
             goban=Goban(size=args.size, goshi=players),
