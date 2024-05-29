@@ -188,7 +188,7 @@ class TronGoshi(Goshi):
             terminated = True
         
         reward = self.reward_function(goban, action) if not terminated else -1000 # Penalización por haberse suicidado/colocar mal una pieza
-        print(f"{self.name} reward: {reward}")
+        #print(f"{self.name} reward: {reward}")
         self.memory.append((state, action, new_state, reward, terminated))
         self.step_count+=1
         
