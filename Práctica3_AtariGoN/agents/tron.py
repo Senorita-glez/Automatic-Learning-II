@@ -378,18 +378,18 @@ class TronGoshi(Goshi):
                 row, col  = new_point
                 if 0 <= row < len(board[0]) and 0 <= col < len(board[0]):
                     # it was already visited
-                    if board[row][col] in visited:
+                    if new_point in visited:
                         continue
                     # is another enemy's stone
                     if board[row][col] == enemy:
-                        if (row,col) not in visited:
+                        if new_point not in visited and new_point not in to_check:
                             dangered_stones += 1
-                            to_check.append((row,col))
+                            to_check.append(new_point)
                         continue                    
                     # is empty
                     elif board[row][col] == 0:
                         total_liberties += 1
-                        points_of_interest.append((row,col))
+                        points_of_interest.append(new_point)
         return total_liberties, points_of_interest, visited, dangered_stones
     
     def get_new_state(self, goban: 'Goban', action: 'Ten'):
