@@ -66,7 +66,7 @@ def run_game(
         # next turn
         #print(f'Player: {player.name}, Move: {ten}')
         #goban.print_board()
-        goban.print_board()
+        # goban.print_board()
         goshi.append(player)
 
     # Now we compute the scores based on the captured players and on
@@ -127,6 +127,8 @@ def main():
     # The player's scores (確認)
     kakunin: Type[Goshi] = {player: [] for player in players}
     for game in range(args.games):
+        if game%100==0:
+            print(game)
         results = run_game(
             goban=Goban(size=args.size, goshi=players),
             goshi=players,

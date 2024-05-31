@@ -89,6 +89,7 @@ class TronGoshi(Goshi):
     target_dqn = DQN(in_states=num_states, h1_nodes= num_states*2, out_actions = num_actions)
 
     model_device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    print(model_device)
 
     try:
         policy_dqn.load_state_dict(torch.load('tron.pt', map_location=model_device))
